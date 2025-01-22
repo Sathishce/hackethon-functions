@@ -1,0 +1,37 @@
+service: hackethon-app
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  region: us-east-1
+  environment:
+    REKOGNITION_TOPIC_ARN: arn:aws:sns:us-east-1:123456789012:rekognition-topic
+    DYNAMODB_TABLE_NAME: rekognition-results-table
+    AWS_REGION: us-east-1
+
+functions:
+  uploadFileHandler:
+    handler: src/handlers/uploadFileHandler.uploadFile
+    events:
+      - http:
+          path: /upload
+          method: post
+
+  rekognitionHandler:
+    handler: src/handlers/rekognitionHandler.analyzeImage
+    events:
+      - sns: rekognitionTopic
+
+  saveRekognitionResult:
+    handler: src/handlers/saveRekognitionResult.save
+    events:
+      - sns: rekognitionTopic
+
+resources:
+  Resources:
+    RekognitionTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: RekognitionTopic
+        TopicName: rekognition-topic

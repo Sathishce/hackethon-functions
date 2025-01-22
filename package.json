@@ -1,0 +1,17 @@
+{
+  "name": "hackethon-functions",
+  "version": "1.0.0",
+  "description": "Serverless backend for hackethon-app",
+  "main": "src/handlers/uploadFileHandler.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "remove": "serverless remove"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1080.0",
+    "serverless": "^4.4.19"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
