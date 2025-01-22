@@ -1,48 +1,41 @@
-// src/handlers/rekognitionHandler.js
+// src/handlers/saveRekognitionResult.js
 const AWS = require('aws-sdk');
-const rekognition = new AWS.Rekognition();
-const sns = new AWS.SNS();
+const dynamoDB = new AWS.DynamoDB.DocumentClient();
+const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME; // Fetch the DynamoDB table name from environment variables
 
-module.exports.analyzeImage = async (event) => {
+module.exports.save = async (event) => {
   console.log('Received SNS event:', JSON.stringify(event, null, 2));
 
-  const { bucketName, fileKey } = JSON.parse(event.Records[0].Sns.Message);
+  // Extract Rekognition result and fileKey from the SNS message
+  const { rekognitionResult, fileKey } = JSON.parse(event.Records[0].Sns.Message);
+
+  // Prepare the item to be saved to DynamoDB
+  const params = {
+    TableName: TABLE_NAME,
+    Item: {
+      fileKey, // The key of the file in S3
+      rekognitionResult, // The result of Rekognition
+      timestamp: new Date().toISOString(), // The timestamp of when the result was saved
+    },
+  };
 
   try {
-    const params = {
-      Image: {
-        S3Object: {
-          Bucket: bucketName,
-          Name: fileKey,
-        },
-      },
-    };
-
-    const rekognitionResult = await rekognition.detectLabels(params).promise();
-
-    const resultMessage = {
-      rekognitionResult,
-      fileKey,
-    };
-
-    const snsParams = {
-      Message: JSON.stringify(resultMessage),
-      TopicArn: process.env.REKOGNITION_TOPIC_ARN,
-    };
-    await sns.publish(snsParams).promise();
+    // Save the result to DynamoDB
+    await dynamoDB.put(params).promise();
+    console.log('Rekognition result saved to DynamoDB');
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Rekognition analysis complete.',
+        message: 'Rekognition result saved successfully.',
       }),
     };
   } catch (error) {
-    console.error('Error analyzing image:', error);
+    console.error('Error saving Rekognition result:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({
-        message: 'Error analyzing image',
+        message: 'Error saving Rekognition result',
       }),
     };
   }

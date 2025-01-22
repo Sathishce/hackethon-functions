@@ -1,6 +1,5 @@
 // src/handlers/saveRekognitionResult.js
-const AWS = require('aws-sdk');
-const dynamoDB = new AWS.DynamoDB.DocumentClient();
+const { saveToDynamo } = require('../utils/dynamoUtils');  // Import saveToDynamo function
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME;
 
 module.exports.save = async (event) => {
@@ -8,21 +7,25 @@ module.exports.save = async (event) => {
 
   const { rekognitionResult, fileKey } = JSON.parse(event.Records[0].Sns.Message);
 
+  // Prepare the item to be saved to DynamoDB
   const params = {
     TableName: TABLE_NAME,
     Item: {
-      fileKey,
-      rekognitionResult,
-      timestamp: new Date().toISOString(),
+      fileKey,  // The key of the file in S3
+      rekognitionResult,  // The result of Rekognition
+      timestamp: new Date().toISOString(),  // The timestamp of when the result was saved
     },
   };
 
   try {
-    await dynamoDB.put(params).promise();
+    // Use the utility function to save the result to DynamoDB
+    await saveToDynamo(params);  
+    console.log('Rekognition result saved to DynamoDB');
+
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Rekognition result saved.',
+        message: 'Rekognition result saved successfully.',
       }),
     };
   } catch (error) {
